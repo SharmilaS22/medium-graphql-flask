@@ -1,12 +1,16 @@
 from flask import Flask
-import graphene
 app = Flask(__name__)
 
 from graphene import ObjectType, Schema, Argument, String, Int,  Field, NonNull, List
  
 
+@app.route('/')
+def root_route():
+    return 'Hello World!'
+
+
 '''
-    Simple query to return string
+    Simple query to return string -  Query and Schema
 '''
 class Query(ObjectType):
 
@@ -19,20 +23,38 @@ class Query(ObjectType):
     def resolve_hello(self, info, name, age):
         return 'Hello ' + name + ' of age ' + str(age)
 
-my_query = """
-    {
-        hello ( name = "Sharmi" )
+helloSchema = Schema(query = Query)
+
+
+#    Get a String 
+#    helloSchema
+#   
+#   http://localhost:5000/hello/Percy
+
+@app.route('/hello/<name>')
+def hello_world(name):
+    # query
+    my_query = """
+        {
+            hello ( name : "%s" )
+        }
+    """%(name)
+
+    result = helloSchema.execute(my_query)
+
+    return {
+        "data": result.data['hello']
     }
-"""
 
 
 
+# Book object
 class Book(ObjectType):
     id     = NonNull(Int)
     title  = String()
     author = String()
 
-# database
+# array of objects
 book_array = [
     Book(id = 1, title = "Angels and Demons", author = "Dan Brown"),
     Book(id = 2, title = "And Then There Were None", author = "Agatha Christie"),
@@ -41,31 +63,48 @@ book_array = [
 # print(book_array)
 
 
+''' ------------------------------------------------------------------------
+    Query to return an object --  Query and Schema
 '''
-    Query to return an object
-'''
-
 class BookQuery (ObjectType):
 
     book = Field(Book)
 
     def resolve_book(self, info):
 
-        new_book = book_array[0]
+        new_book = Book( id = 1, title = "Six of Crows", author = "Leigh Bardugo" )
 
         return new_book
 
-book_query = """
-    {
-        book {
-            id, title
+bookSchema = Schema(query=BookQuery)
+
+
+#   Get a Book object
+#   bookSchema
+# 
+#   http://localhost:5000/book
+
+@app.route('/book')
+def get_book():
+
+    book_query = """
+        {
+            book {
+                id, title
+            }
         }
+    """
+
+    result = bookSchema.execute(book_query)
+
+    return {
+        "data": result.data['book']
     }
-"""
 
 
-'''
-    takes arguments - returns object
+
+''' -------------------------------------------------------
+    takes arguments - returns object -  Query and Schema
 '''
 
 class BookArgsQuery (ObjectType):
@@ -82,23 +121,38 @@ class BookArgsQuery (ObjectType):
 
         return new_book
 
-book_with_args_query = """
-    {
-        bookDetails (id: 3 ) {
-            id, title
+bookArgsSchema = Schema(query=BookArgsQuery)
+
+
+#   Get a Book by Id
+#   bookArgsSchema
+# 
+#   http://localhost:5000/book/2
+@app.route('/book/<int:id>')
+def get_book_by_id(id):
+  
+    book_with_args_query = """
+        {
+            bookDetails (id: %d ) {
+                id, title
+            }
         }
+    """%(id)
+
+    result = bookArgsSchema.execute(book_with_args_query)
+
+    return {
+        "data": result.data['bookDetails']
     }
-"""
 
+''' --------------------------------------------------------------
+    returns all books - Query and Schema
 '''
-    returns all books
-'''
-
 class BooksQuery (ObjectType):
 
     book_details = Field(Book, id = Argument(Int))
 
-    books = List(Book)
+    book_list = List(Book)
 
     def resolve_book_details(self, info, id):
 
@@ -109,35 +163,32 @@ class BooksQuery (ObjectType):
 
         return new_book
 
-    def resolve_books(self, info):
+    def resolve_book_list(self, info):
         return book_array
 
-books_query = """
-    {
-        books {
-            id, title
+booksSchema = Schema(query=BooksQuery)
+
+#   Get all Books
+#   booksSchema
+# 
+#   http://localhost:5000/books
+@app.route('/books')
+def get_all_books():
+
+    books_query = """
+        {
+            bookList {
+                title, author
+            }
         }
-    }
-"""
+    """
 
-    
-'''
-    Schema, and executing query
-'''
-QueryForSchema = BooksQuery
-QueryToExecute = books_query
+    result = booksSchema.execute(books_query)
 
-schema = Schema(query=QueryForSchema)
-
-result = schema.execute(QueryToExecute)
-print(result)
-
-
-@app.route('/')
-def root_route():
     return {
-        "data": result.data
+        "data": result.data['bookList']
     }
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=4000, debug=True)
+    app.run(debug=True)

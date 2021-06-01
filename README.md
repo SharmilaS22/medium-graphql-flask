@@ -5,7 +5,7 @@ Code for medium article on graphql in Flask
 
 To run
 ```
-pip i requirements.txt
+pip install -r requirements.txt
 ```
 ```
 python app.py
